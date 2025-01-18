@@ -1,4 +1,4 @@
 (executable
  (public_name test_game)
  (name main)
- (libraries test_game raylib))
+ (libraries test_game.lib))

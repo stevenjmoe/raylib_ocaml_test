@@ -1,2 +1,4 @@
 (library
- (name test_game))
+ (name lib)
+ (public_name test_game.lib)
+ (libraries raylib))
