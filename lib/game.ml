@@ -3,7 +3,40 @@ open Raylib
 let screen_width = 800
 let screen_height = 450
 
-type sprite = { texture : Texture2D.t; dest_rect : Rectangle.t }
+module Sprite = struct
+  type t = { texture : Texture2D.t; dest_rect : Rectangle.t; vel : Vector2.t }
+
+  let set_velocity sprite vel = { sprite with vel }
+
+  let apply_velocity sprite =
+    let x =
+      Rectangle.x sprite.dest_rect +. (Vector2.x sprite.vel *. get_frame_time ())
+    in
+    let y =
+      Rectangle.y sprite.dest_rect +. (Vector2.y sprite.vel *. get_frame_time ())
+    in
+    Rectangle.set_x sprite.dest_rect x;
+    Rectangle.set_y sprite.dest_rect y;
+    ()
+end
+
+let move_player sprite =
+  let sprite =
+    if is_key_down Key.D then
+      Sprite.set_velocity sprite (Vector2.create 100.0 0.0)
+    else if is_key_down Key.A then
+      Sprite.set_velocity sprite (Vector2.create (-100.0) 0.0)
+    else Sprite.set_velocity sprite (Vector2.create 0.0 0.0)
+  in
+  sprite
+
+let apply_gravity (sprite : Sprite.t) =
+  let velocity =
+    match Vector2.y sprite.vel +. 10.0 with v when v > 200.0 -> 200.0 | v -> v
+  in
+  Sprite.set_velocity sprite (Vector2.create (Vector2.x sprite.vel) velocity)
+
+let apply_vel sprite = Sprite.apply_velocity sprite
 
 let setup () =
   init_window screen_width screen_height "test game";
@@ -15,10 +48,12 @@ let setup () =
   in
 
   let player =
-    {
-      texture = player_idle_texture;
-      dest_rect = Rectangle.create 190.0 200.0 100.0 100.0;
-    }
+    Sprite.
+      {
+        texture = player_idle_texture;
+        dest_rect = Rectangle.create 200.0 100.0 100.0 100.0;
+        vel = Vector2.create 0.0 0.0;
+      }
   in
 
   let _ =
@@ -31,14 +66,16 @@ let setup () =
   set_target_fps 60;
   player
 
-let rec loop (player : sprite) =
+let rec loop (player : Sprite.t) =
   if Raylib.window_should_close () then Raylib.close_window ()
-  else begin_drawing ();
+  else move_player player |> apply_gravity |> apply_vel;
+  begin_drawing ();
+
   clear_background Color.blue;
   draw_text "A window! Amazing!" 190 200 20 Color.lightgray;
   let _ = player.dest_rect in
   draw_texture_pro player.texture
-    (Rectangle.create 0.0 48.0 16.0 16.0)
+    (Rectangle.create 0.0 0.0 48.0 48.0)
     player.dest_rect (Vector2.create 0.0 0.0) 0.0 Color.lightgray;
   end_drawing ();
   loop player;
