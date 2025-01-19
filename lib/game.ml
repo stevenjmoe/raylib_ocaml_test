@@ -4,37 +4,52 @@ let screen_width = 800
 let screen_height = 450
 
 module Sprite = struct
-  type t = { texture : Texture2D.t; dest_rect : Rectangle.t; vel : Vector2.t }
+  type t = {
+    texture : Texture2D.t;
+    x : float;
+    y : float;
+    width : float;
+    height : float;
+    velocity : Vector2.t;
+  }
 
-  let set_velocity sprite vel = { sprite with vel }
+  (** [set_velocity sprite vx vy] returns a new sprite with [velocity] updated
+      with [vx] and [vy] *)
+  let set_velocity sprite vx vy =
+    { sprite with velocity = Vector2.create vx vy }
 
+  (** [apply_velocity sprite] returns a new sprite with the [x] and [y] values
+      updated with the values from [sprite.velocity] and the elapsed time frame.
+  *)
   let apply_velocity sprite =
-    let x =
-      Rectangle.x sprite.dest_rect +. (Vector2.x sprite.vel *. get_frame_time ())
-    in
-    let y =
-      Rectangle.y sprite.dest_rect +. (Vector2.y sprite.vel *. get_frame_time ())
-    in
-    Rectangle.set_x sprite.dest_rect x;
-    Rectangle.set_y sprite.dest_rect y;
-    ()
+    let dt = get_frame_time () in
+    let x = sprite.x +. (Vector2.x sprite.velocity *. dt) in
+    let y = sprite.y +. (Vector2.y sprite.velocity *. dt) in
+    { sprite with x; y }
+
+  (* TODO: This makes assumptions about the sprite being drawn that might not always be true. I can fix this later when it is needed. *)
+  let draw sprite =
+    let src = Rectangle.create 0.0 0.0 48.0 48.0 in
+    let dst = Rectangle.create sprite.x sprite.y sprite.width sprite.height in
+    draw_texture_pro sprite.texture src dst (Vector2.create 0.0 0.0) 0.0
+      Color.white
 end
 
 let move_player sprite =
   let sprite =
-    if is_key_down Key.D then
-      Sprite.set_velocity sprite (Vector2.create 100.0 0.0)
-    else if is_key_down Key.A then
-      Sprite.set_velocity sprite (Vector2.create (-100.0) 0.0)
-    else Sprite.set_velocity sprite (Vector2.create 0.0 0.0)
+    if is_key_down Key.D then Sprite.set_velocity sprite 100.0 0.0
+    else if is_key_down Key.A then Sprite.set_velocity sprite (-100.0) 0.0
+    else Sprite.set_velocity sprite 0.0 0.0
   in
   sprite
 
 let apply_gravity (sprite : Sprite.t) =
   let velocity =
-    match Vector2.y sprite.vel +. 10.0 with v when v > 200.0 -> 200.0 | v -> v
+    match Vector2.y sprite.velocity +. 10.0 with
+    | v when v > 200.0 -> 200.0
+    | v -> v
   in
-  Sprite.set_velocity sprite (Vector2.create (Vector2.x sprite.vel) velocity)
+  { sprite with velocity = Vector2.create (Vector2.x sprite.velocity) velocity }
 
 let apply_vel sprite = Sprite.apply_velocity sprite
 
@@ -51,11 +66,13 @@ let setup () =
     Sprite.
       {
         texture = player_idle_texture;
-        dest_rect = Rectangle.create 200.0 100.0 100.0 100.0;
-        vel = Vector2.create 0.0 0.0;
+        x = 200.0;
+        y = 100.0;
+        width = 100.0;
+        height = 100.0;
+        velocity = Vector2.create 0.0 0.0;
       }
   in
-
   let _ =
     Camera2D.create (Vector2.create 0.0 0.0)
       (Vector2.create
@@ -67,18 +84,16 @@ let setup () =
   player
 
 let rec loop (player : Sprite.t) =
-  if Raylib.window_should_close () then Raylib.close_window ()
-  else move_player player |> apply_gravity |> apply_vel;
-  begin_drawing ();
-
-  clear_background Color.blue;
-  draw_text "A window! Amazing!" 190 200 20 Color.lightgray;
-  let _ = player.dest_rect in
-  draw_texture_pro player.texture
-    (Rectangle.create 0.0 0.0 48.0 48.0)
-    player.dest_rect (Vector2.create 0.0 0.0) 0.0 Color.lightgray;
-  end_drawing ();
-  loop player;
-  ()
+  if Raylib.window_should_close () then (
+    close_window ();
+    close_audio_device ())
+  else
+    let player = player |> move_player |> apply_gravity |> apply_vel in
+    begin_drawing ();
+    clear_background Color.blue;
+    draw_text "A window! Amazing!" 190 200 20 Color.lightgray;
+    Sprite.draw player;
+    end_drawing ();
+    loop player
 
 let run = setup () |> loop
