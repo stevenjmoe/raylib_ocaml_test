@@ -19,8 +19,10 @@ type animation = {
   mutable current_kind : animation_kind;
   mutable current_frame : int;
   mutable timer : float;
-  frames_idle : frame_info array;
-  texture : Raylib.Texture.t;
+  idle_frames : frame_info array;
+  idle_texture : Raylib.Texture.t;
+  moving_frames : frame_info array;
+  moving_texture : Raylib.Texture.t;
 }
 
 type world = {
@@ -31,7 +33,7 @@ type world = {
   inputs : (int, input) Hashtbl.t;
 }
 
-let create_world =
+let create_world () =
   {
     last_id = 0;
     positions = Hashtbl.create 100;
@@ -79,6 +81,10 @@ let create_player (w : world) =
     load_texture
       "assets/Asset Packs 1-5/Asset Pack-V1/Player Idle/Player Idle 48x48.png"
   in
+  let player_running_texture =
+    load_texture
+      "assets/Asset Packs 1-5/Asset Pack-V1/Player Run/player run 48x48.png"
+  in
 
   let frames_idle =
     [|
@@ -94,22 +100,39 @@ let create_player (w : world) =
       { src_x = 432.0; src_y = 0.0; duration = 0.2 };
     |]
   in
+  let frames_running =
+    [|
+      { src_x = 0.0; src_y = 0.0; duration = 0.2 };
+      { src_x = 48.0; src_y = 0.0; duration = 0.2 };
+      { src_x = 96.0; src_y = 0.0; duration = 0.2 };
+      { src_x = 144.0; src_y = 0.0; duration = 0.2 };
+      { src_x = 192.0; src_y = 0.0; duration = 0.2 };
+      { src_x = 240.0; src_y = 0.0; duration = 0.2 };
+      { src_x = 288.0; src_y = 0.0; duration = 0.2 };
+      { src_x = 336.0; src_y = 0.0; duration = 0.2 };
+    |]
+  in
 
   let anim =
     {
       current_kind = Idle;
       current_frame = 0;
       timer = 0.0;
-      frames_idle;
-      texture = player_idle_texture;
+      idle_frames = frames_idle;
+      idle_texture = player_idle_texture;
+      moving_frames = frames_running;
+      moving_texture = player_running_texture;
     }
   in
 
   let input = { up = false; down = false; left = false; right = false } in
 
   let w =
-    w |> add_position player pos |> add_velocity player vel
-    |> add_animation player anim |> add_input player input
+    w
+    |> add_position player pos
+    |> add_velocity player vel
+    |> add_animation player anim
+    |> add_input player input
   in
   (w, player)
 
@@ -120,9 +143,26 @@ let animation_system (dt : float) (w : world) =
       match
         (Hashtbl.find_opt w.velocities ent, Hashtbl.find_opt w.positions ent)
       with
-      | Some _vel, Some _pos ->
-          (* TODO: handle other animations *)
-          let frames = anim.frames_idle in
+      | Some vel, Some _pos ->
+          let speed = abs_float vel.vx +. abs_float vel.vy in
+          let desired_kind =
+            if speed > 0.1 then
+              Move
+            else
+              Idle
+          in
+
+          if desired_kind <> anim.current_kind then (
+            anim.current_kind <- desired_kind;
+            anim.current_frame <- 0;
+            anim.timer <- 0.0);
+
+          let frames =
+            match anim.current_kind with
+            | Move -> anim.moving_frames
+            | _ -> anim.idle_frames
+          in
+
           anim.timer <- anim.timer +. dt;
           let current_frame_duration = frames.(anim.current_frame).duration in
           if anim.timer > current_frame_duration then (
@@ -133,10 +173,8 @@ let animation_system (dt : float) (w : world) =
     w.animations;
   w
 
-(* TODO: something with the inputs. They are a redundant right now *)
-
-(** [input_system w] updates entities with an [input] component based on the
-    pressed key*)
+(** [input_system w] updates the velocity of entities with an [input] component
+    based on the pressed key*)
 let input_system (w : world) =
   Hashtbl.iter
     (fun ent _input ->
@@ -144,11 +182,15 @@ let input_system (w : world) =
       | Some vel ->
           vel.vx <- 0.0;
           vel.vy <- 0.0;
-          if Raylib.is_key_down Raylib.Key.A then vel.vx <- vel.vx -. 100.0;
-          if Raylib.is_key_down Raylib.Key.D then vel.vx <- vel.vx +. 100.0;
-          if Raylib.is_key_down Raylib.Key.W then vel.vy <- vel.vy -. 100.0;
-          if Raylib.is_key_down Raylib.Key.S then vel.vy <- vel.vy +. 100.0
-      | None -> ())
+          if Raylib.is_key_down Raylib.Key.A then
+            vel.vx <- vel.vx -. 100.0;
+          if Raylib.is_key_down Raylib.Key.D then
+            vel.vx <- vel.vx +. 100.0;
+          if Raylib.is_key_down Raylib.Key.W then
+            vel.vy <- vel.vy -. 100.0;
+          if Raylib.is_key_down Raylib.Key.S then
+            vel.vy <- vel.vy +. 100.0
+      | _ -> ())
     w.inputs;
   w
 
@@ -168,14 +210,17 @@ let draw_sprite (entity : Entity.t) (w : world) =
     (Hashtbl.find_opt w.positions entity, Hashtbl.find_opt w.animations entity)
   with
   | Some pos, Some anim ->
-      let frames = anim.frames_idle in
-      (* Only idle frames are defined *)
+      let frames, texture =
+        match anim.current_kind with
+        | Move -> (anim.moving_frames, anim.moving_texture)
+        | _ -> (anim.idle_frames, anim.idle_texture)
+      in
       let frame = frames.(anim.current_frame) in
       let src_rect =
         Raylib.Rectangle.create frame.src_x frame.src_y 48.0 48.0
       in
       let dst_rect = Raylib.Rectangle.create pos.x pos.y pos.w pos.h in
-      Raylib.draw_texture_pro anim.texture src_rect dst_rect
+      Raylib.draw_texture_pro texture src_rect dst_rect
         (Raylib.Vector2.create 0.0 0.0)
         0.0 Raylib.Color.white
   | _ -> ()
