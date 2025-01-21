@@ -9,12 +9,12 @@ let rec game_loop (w : world) (player : Entity.t) =
     let dt = Raylib.get_frame_time () in
 
     (* Update systems *)
-    let w = animation_system dt w in
+    let w = input_system w |> movement_system dt |> animation_system dt in
 
     (* Rendering *)
     Raylib.begin_drawing ();
     Raylib.clear_background Color.blue;
-    Raylib.draw_text "Idle Character Example" 10 10 20 Color.white;
+    Raylib.draw_text "Test!" 10 10 20 Color.white;
     draw_sprite player w;
     Raylib.end_drawing ();
 
@@ -22,6 +22,7 @@ let rec game_loop (w : world) (player : Entity.t) =
 
 let setup () =
   Raylib.init_window 800 600 "Test game";
+  Raylib.init_audio_device ();
   let world = Ecs.create_world in
   let world, player = create_player world in
   Raylib.set_target_fps 60;

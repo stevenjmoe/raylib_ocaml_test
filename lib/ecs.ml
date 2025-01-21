@@ -8,6 +8,13 @@ type velocity = { mutable vx : float; mutable vy : float }
 type animation_kind = Idle | Move | Attack
 type frame_info = { src_x : float; src_y : float; duration : float }
 
+type input = {
+  mutable left : bool;
+  mutable right : bool;
+  mutable up : bool;
+  mutable down : bool;
+}
+
 type animation = {
   mutable current_kind : animation_kind;
   mutable current_frame : int;
@@ -21,6 +28,7 @@ type world = {
   positions : (int, position) Hashtbl.t;
   velocities : (int, velocity) Hashtbl.t;
   animations : (int, animation) Hashtbl.t;
+  inputs : (int, input) Hashtbl.t;
 }
 
 let create_world =
@@ -29,6 +37,7 @@ let create_world =
     positions = Hashtbl.create 100;
     velocities = Hashtbl.create 100;
     animations = Hashtbl.create 100;
+    inputs = Hashtbl.create 100;
   }
 
 (** [create_entity world] creates a new [entity] the the [world]'s [last_id]. It
@@ -54,6 +63,10 @@ let add_velocity (entity : Entity.t) (vel : velocity) (world : world) =
     returns [world] *)
 let add_animation (entity : Entity.t) (anim : animation) (world : world) =
   Hashtbl.add world.animations entity anim;
+  world
+
+let add_input (entity : Entity.t) (input : input) (world : world) =
+  Hashtbl.add world.inputs entity input;
   world
 
 let create_player (w : world) =
@@ -92,9 +105,11 @@ let create_player (w : world) =
     }
   in
 
+  let input = { up = false; down = false; left = false; right = false } in
+
   let w =
     w |> add_position player pos |> add_velocity player vel
-    |> add_animation player anim
+    |> add_animation player anim |> add_input player input
   in
   (w, player)
 
@@ -118,7 +133,36 @@ let animation_system (dt : float) (w : world) =
     w.animations;
   w
 
-(* Function to draw the sprite based on position and current animation frame *)
+(* TODO: something with the inputs. They are a redundant right now *)
+
+(** [input_system w] updates entities with an [input] component based on the
+    pressed key*)
+let input_system (w : world) =
+  Hashtbl.iter
+    (fun ent _input ->
+      match Hashtbl.find_opt w.velocities ent with
+      | Some vel ->
+          vel.vx <- 0.0;
+          vel.vy <- 0.0;
+          if Raylib.is_key_down Raylib.Key.A then vel.vx <- vel.vx -. 100.0;
+          if Raylib.is_key_down Raylib.Key.D then vel.vx <- vel.vx +. 100.0;
+          if Raylib.is_key_down Raylib.Key.W then vel.vy <- vel.vy -. 100.0;
+          if Raylib.is_key_down Raylib.Key.S then vel.vy <- vel.vy +. 100.0
+      | None -> ())
+    w.inputs;
+  w
+
+let movement_system (dt : float) (w : world) =
+  Hashtbl.iter
+    (fun ent vel ->
+      match Hashtbl.find_opt w.positions ent with
+      | Some pos ->
+          pos.x <- pos.x +. (vel.vx *. dt);
+          pos.y <- pos.y +. (vel.vy *. dt)
+      | None -> ())
+    w.velocities;
+  w
+
 let draw_sprite (entity : Entity.t) (w : world) =
   match
     (Hashtbl.find_opt w.positions entity, Hashtbl.find_opt w.animations entity)
