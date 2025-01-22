@@ -43,6 +43,8 @@ type world = {
   facing_directions : (int, facing) Hashtbl.t;
 }
 
+(* Helpers *)
+
 (** [create_entity world] creates a new [entity] the the [world]'s [last_id]. It
     then returns [new_world * entity] *)
 let create_entity (world : world) =
@@ -75,6 +77,8 @@ let add_input (entity : Entity.t) (input : input) (world : world) =
 let add_facing (entity : Entity.t) (facing : facing) (world : world) =
   Hashtbl.add world.facing_directions entity facing;
   world
+
+let get_position (ent : Entity.t) (w : world) = Hashtbl.find_opt w.positions ent
 
 let draw_sprite (ent : Entity.t) (w : world) =
   match

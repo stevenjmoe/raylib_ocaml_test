@@ -7,7 +7,7 @@ let animation_system (dt : float) (w : world) =
         (Hashtbl.find_opt w.velocities ent, Hashtbl.find_opt w.positions ent)
       with
       | Some vel, Some _pos ->
-          let speed = abs_float vel.vx +. abs_float vel.vy in
+          let speed = abs_float vel.vx in
           let desired_kind =
             if speed > 0.1 then
               Move
@@ -54,10 +54,8 @@ let input_system (w : world) =
           if Raylib.is_key_down Raylib.Key.D then (
             vel.vx <- vel.vx +. 100.0;
             facing.horizontal <- `Right);
-          if Raylib.is_key_down Raylib.Key.W then
-            vel.vy <- vel.vy -. 100.0;
-          if Raylib.is_key_down Raylib.Key.S then
-            vel.vy <- vel.vy +. 100.0
+          if Raylib.is_key_down Raylib.Key.Space then
+            vel.vy <- vel.vy -. 100.0
       | _ -> ())
     w.inputs;
   w
@@ -70,5 +68,14 @@ let movement_system (dt : float) (w : world) =
           pos.x <- pos.x +. (vel.vx *. dt);
           pos.y <- pos.y +. (vel.vy *. dt)
       | None -> ())
+    w.velocities;
+  w
+
+let gravity_system (_dt : float) (w : world) =
+  Hashtbl.iter
+    (fun _ent vel ->
+      vel.vy <- vel.vy +. 100.;
+      Printf.printf "%f \n%!" vel.vx;
+      ())
     w.velocities;
   w

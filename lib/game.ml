@@ -1,6 +1,9 @@
 open Ecs
 open Systems
 
+let width = 800
+let height = 600
+
 let rec game_loop (w : world) (player : Entity.t) =
   let open Raylib in
   if Raylib.window_should_close () then (
@@ -10,7 +13,12 @@ let rec game_loop (w : world) (player : Entity.t) =
     let dt = Raylib.get_frame_time () in
 
     (* Update systems *)
-    let w = input_system w |> movement_system dt |> animation_system dt in
+    let w =
+      input_system w
+      |> gravity_system dt
+      |> movement_system dt
+      |> animation_system dt
+    in
 
     (* Rendering *)
     Raylib.begin_drawing ();
@@ -22,8 +30,10 @@ let rec game_loop (w : world) (player : Entity.t) =
     game_loop w player
 
 let setup () =
-  Raylib.init_window 800 600 "Test game";
-  Raylib.init_audio_device ();
+  let open Raylib in
+  set_config_flags [ Raylib.ConfigFlags.Window_resizable ];
+  init_window width height "Test game";
+  init_audio_device ();
   let world = Spawn.create_world () in
   let world, player = Spawn.create_player world in
   Raylib.set_target_fps 60;
