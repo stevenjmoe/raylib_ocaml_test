@@ -1,4 +1,5 @@
 open Ecs
+open Systems
 
 let rec game_loop (w : world) (player : Entity.t) =
   let open Raylib in
@@ -23,8 +24,8 @@ let rec game_loop (w : world) (player : Entity.t) =
 let setup () =
   Raylib.init_window 800 600 "Test game";
   Raylib.init_audio_device ();
-  let world = create_world () in
-  let world, player = create_player world in
+  let world = Spawn.create_world () in
+  let world, player = Spawn.create_player world in
   Raylib.set_target_fps 60;
   (world, player)
 
