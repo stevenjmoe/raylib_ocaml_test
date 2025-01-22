@@ -47,15 +47,14 @@ let input_system (w : world) =
       with
       | Some vel, Some facing ->
           vel.vx <- 0.0;
-          vel.vy <- 0.0;
           if Raylib.is_key_down Raylib.Key.A then (
             vel.vx <- vel.vx -. 100.0;
             facing.horizontal <- `Left);
           if Raylib.is_key_down Raylib.Key.D then (
             vel.vx <- vel.vx +. 100.0;
             facing.horizontal <- `Right);
-          if Raylib.is_key_down Raylib.Key.Space then
-            vel.vy <- vel.vy -. 100.0
+          if Raylib.is_key_pressed Raylib.Key.Space && vel.vy = 0. then
+            vel.vy <- vel.vy -. 1000.0
       | _ -> ())
     w.inputs;
   w
@@ -66,7 +65,16 @@ let movement_system (dt : float) (w : world) =
       match Hashtbl.find_opt w.positions ent with
       | Some pos ->
           pos.x <- pos.x +. (vel.vx *. dt);
-          pos.y <- pos.y +. (vel.vy *. dt)
+          pos.y <- pos.y +. (vel.vy *. dt);
+
+          (* TODO: temporarily stop my guy from falling off the screen with no collisions *)
+          let screen_h = float_of_int (Raylib.get_screen_height ()) in
+          let sprite_h = 100. in
+          let bottom_y = screen_h -. sprite_h in
+
+          if pos.y > bottom_y then (
+            pos.y <- bottom_y;
+            vel.vy <- 0.0)
       | None -> ())
     w.velocities;
   w
@@ -74,8 +82,7 @@ let movement_system (dt : float) (w : world) =
 let gravity_system (_dt : float) (w : world) =
   Hashtbl.iter
     (fun _ent vel ->
-      vel.vy <- vel.vy +. 100.;
-      Printf.printf "%f \n%!" vel.vx;
+      vel.vy <- (if vel.vy > 600. then 600. else vel.vy +. 100.);
       ())
     w.velocities;
   w
