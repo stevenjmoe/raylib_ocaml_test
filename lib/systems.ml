@@ -48,10 +48,10 @@ let input_system (w : world) =
       | Some vel, Some facing ->
           vel.vx <- 0.0;
           if Raylib.is_key_down Raylib.Key.A then (
-            vel.vx <- vel.vx -. 100.0;
+            vel.vx <- vel.vx -. 600.0;
             facing.horizontal <- `Left);
           if Raylib.is_key_down Raylib.Key.D then (
-            vel.vx <- vel.vx +. 100.0;
+            vel.vx <- vel.vx +. 600.0;
             facing.horizontal <- `Right);
           if Raylib.is_key_pressed Raylib.Key.Space && vel.vy = 0. then
             vel.vy <- vel.vy -. 1000.0
