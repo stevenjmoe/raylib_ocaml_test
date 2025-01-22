@@ -7,9 +7,13 @@ let animation_system (dt : float) (w : world) =
         (Hashtbl.find_opt w.velocities ent, Hashtbl.find_opt w.positions ent)
       with
       | Some vel, Some _pos ->
-          let speed = abs_float vel.vx in
+          let speed_x = abs_float vel.vx in
+          let speed_y = vel.vy in
+
           let desired_kind =
-            if speed > 0.1 then
+            if speed_y < -0.1 then
+              Jump
+            else if speed_x > 0.1 then
               Move
             else
               Idle
@@ -23,6 +27,7 @@ let animation_system (dt : float) (w : world) =
           let frames =
             match anim.current_kind with
             | Move -> anim.moving_frames
+            | Jump -> anim.jumping_frames
             | _ -> anim.idle_frames
           in
 
@@ -54,7 +59,7 @@ let input_system (w : world) =
             vel.vx <- vel.vx +. 600.0;
             facing.horizontal <- `Right);
           if Raylib.is_key_pressed Raylib.Key.Space && vel.vy = 0. then
-            vel.vy <- vel.vy -. 1000.0
+            vel.vy <- vel.vy -. 1500.0
       | _ -> ())
     w.inputs;
   w

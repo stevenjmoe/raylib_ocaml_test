@@ -14,7 +14,7 @@ type input = {
   mutable down : bool;
 }
 
-type animation_kind = Idle | Move | Attack
+type animation_kind = Idle | Move | Attack | Jump
 
 type frame_info = {
   src_x : float;
@@ -32,6 +32,8 @@ type animation = {
   idle_texture : Raylib.Texture.t;
   moving_frames : frame_info array;
   moving_texture : Raylib.Texture.t;
+  jumping_frames : frame_info array;
+  jumping_texture : Raylib.Texture.t;
 }
 
 (* ECS and helper functions *)
@@ -91,6 +93,7 @@ let draw_sprite (ent : Entity.t) (w : world) =
       let frames, texture =
         match anim.current_kind with
         | Move -> (anim.moving_frames, anim.moving_texture)
+        | Jump -> (anim.jumping_frames, anim.jumping_texture)
         | _ -> (anim.idle_frames, anim.idle_texture)
       in
       let frame = frames.(anim.current_frame) in
