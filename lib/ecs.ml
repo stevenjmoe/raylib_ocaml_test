@@ -5,8 +5,16 @@ end
 (* Components *)
 type position = { mutable x : float; mutable y : float; w : float; h : float }
 type velocity = { mutable vx : float; mutable vy : float }
-type animation_kind = Idle | Move | Attack
 type facing = { mutable horizontal : [ `Left | `Right ] }
+
+type input = {
+  mutable left : bool;
+  mutable right : bool;
+  mutable up : bool;
+  mutable down : bool;
+}
+
+type animation_kind = Idle | Move | Attack
 
 type frame_info = {
   src_x : float;
@@ -14,13 +22,6 @@ type frame_info = {
   duration : float;
   width : float;
   height : float;
-}
-
-type input = {
-  mutable left : bool;
-  mutable right : bool;
-  mutable up : bool;
-  mutable down : bool;
 }
 
 type animation = {
