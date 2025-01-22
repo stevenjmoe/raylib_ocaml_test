@@ -5,7 +5,7 @@ end
 (* Components *)
 type position = { mutable x : float; mutable y : float; w : float; h : float }
 type velocity = { mutable vx : float; mutable vy : float }
-type facing = { mutable horizontal : [ `Left | `Right ] }
+type sprite_direction = { mutable horizontal : [ `Left | `Right ] }
 
 type input = {
   mutable left : bool;
@@ -14,7 +14,7 @@ type input = {
   mutable down : bool;
 }
 
-type animation_kind = Idle | Move | Attack | Jump
+type animation_kind = Idle | Move | Attack | Jump | Land
 
 type frame_info = {
   src_x : float;
@@ -34,6 +34,8 @@ type animation = {
   moving_texture : Raylib.Texture.t;
   jumping_frames : frame_info array;
   jumping_texture : Raylib.Texture.t;
+  landing_frames : frame_info array;
+  landing_texture : Raylib.Texture.t;
 }
 
 (* ECS and helper functions *)
@@ -43,7 +45,7 @@ type world = {
   velocities : (int, velocity) Hashtbl.t;
   animations : (int, animation) Hashtbl.t;
   inputs : (int, input) Hashtbl.t;
-  facing_directions : (int, facing) Hashtbl.t;
+  sprite_directions : (int, sprite_direction) Hashtbl.t;
 }
 
 (* Helpers *)
@@ -77,8 +79,8 @@ let add_input (entity : Entity.t) (input : input) (world : world) =
   Hashtbl.add world.inputs entity input;
   world
 
-let add_facing (entity : Entity.t) (facing : facing) (world : world) =
-  Hashtbl.add world.facing_directions entity facing;
+let add_facing (entity : Entity.t) (facing : sprite_direction) (world : world) =
+  Hashtbl.add world.sprite_directions entity facing;
   world
 
 let get_position (ent : Entity.t) (w : world) = Hashtbl.find_opt w.positions ent
@@ -87,13 +89,14 @@ let draw_sprite (ent : Entity.t) (w : world) =
   match
     ( Hashtbl.find_opt w.positions ent,
       Hashtbl.find_opt w.animations ent,
-      Hashtbl.find_opt w.facing_directions ent )
+      Hashtbl.find_opt w.sprite_directions ent )
   with
   | Some pos, Some anim, Some facing ->
       let frames, texture =
         match anim.current_kind with
         | Move -> (anim.moving_frames, anim.moving_texture)
         | Jump -> (anim.jumping_frames, anim.jumping_texture)
+        | Land -> (anim.landing_frames, anim.landing_texture)
         | _ -> (anim.idle_frames, anim.idle_texture)
       in
       let frame = frames.(anim.current_frame) in

@@ -13,7 +13,9 @@ let animation_system (dt : float) (w : world) =
           let desired_kind =
             if speed_y < -0.1 then
               Jump
-            else if speed_x > 0.1 then
+            else if speed_y > 0.1 then
+              Land
+            else if speed_x > 0.1 && speed_y = 0.0 then
               Move
             else
               Idle
@@ -28,6 +30,7 @@ let animation_system (dt : float) (w : world) =
             match anim.current_kind with
             | Move -> anim.moving_frames
             | Jump -> anim.jumping_frames
+            | Land -> anim.landing_frames
             | _ -> anim.idle_frames
           in
 
@@ -48,7 +51,7 @@ let input_system (w : world) =
     (fun ent _input ->
       match
         ( Hashtbl.find_opt w.velocities ent,
-          Hashtbl.find_opt w.facing_directions ent )
+          Hashtbl.find_opt w.sprite_directions ent )
       with
       | Some vel, Some facing ->
           vel.vx <- 0.0;
