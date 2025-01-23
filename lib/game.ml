@@ -1,14 +1,13 @@
-open Ecs
 open Systems
 
 let width = 800
 let height = 600
 
 let rec game_loop
-    (w : world)
-    (player : Entity.t)
+    (w : World.t)
+    (player : Engine.Entity.t)
     (camera : Raylib.Camera2D.t)
-    (player_pos : position) =
+    (player_pos : Engine.Position.t) =
   let open Raylib in
   if Raylib.window_should_close () then (
     Raylib.close_window ();
@@ -32,7 +31,7 @@ let rec game_loop
     begin_mode_2d camera;
     draw_rectangle (-6000) 320 13000 8000 Color.darkgray;
     Raylib.clear_background Color.blue;
-    draw_sprite player w;
+    World.draw_sprite player w;
     end_mode_2d ();
     Raylib.draw_text "Test!" 10 10 20 Color.white;
     Raylib.end_drawing ();
@@ -47,7 +46,7 @@ let setup () =
 
   let world = Spawn.create_world () in
   let world, player = Spawn.create_player world in
-  match Ecs.get_position player world with
+  match World.get_position player world with
   | Some pos ->
       let camera =
         Camera2D.create

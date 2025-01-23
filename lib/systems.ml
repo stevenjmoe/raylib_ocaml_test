@@ -1,6 +1,7 @@
-open Ecs
+open Engine
 
-let animation_system (dt : float) (w : world) =
+let animation_system (dt : float) (w : World.t) =
+  let open Engine.Animation in
   Hashtbl.iter
     (fun ent anim ->
       match
@@ -12,7 +13,7 @@ let animation_system (dt : float) (w : world) =
 
           let desired_kind =
             if speed_y < -0.1 then
-              Jump
+              Animation.Jump
             else if speed_y > 0.1 then
               Land
             else if speed_x > 0.1 && speed_y = 0.0 then
@@ -46,7 +47,7 @@ let animation_system (dt : float) (w : world) =
 
 (** [input_system w] updates the velocity of entities with an [input] component
     based on the pressed key*)
-let input_system (w : world) =
+let input_system (w : World.t) =
   Hashtbl.iter
     (fun ent _input ->
       match
@@ -67,13 +68,14 @@ let input_system (w : world) =
     w.inputs;
   w
 
-let movement_system (dt : float) (w : world) =
+let movement_system (dt : float) (w : World.t) =
   Hashtbl.iter
     (fun ent vel ->
       match Hashtbl.find_opt w.positions ent with
       | Some pos ->
-          pos.x <- pos.x +. (vel.vx *. dt);
-          pos.y <- pos.y +. (vel.vy *. dt);
+          Velocity.(
+            pos.x <- pos.x +. (vel.vx *. dt);
+            pos.y <- pos.y +. (vel.vy *. dt));
 
           (* TODO: temporarily stop my guy from falling off the screen with no collisions *)
           let screen_h = float_of_int (Raylib.get_screen_height ()) in
@@ -87,10 +89,10 @@ let movement_system (dt : float) (w : world) =
     w.velocities;
   w
 
-let gravity_system (_dt : float) (w : world) =
+let gravity_system (_dt : float) (w : World.t) =
   Hashtbl.iter
     (fun _ent vel ->
-      vel.vy <- (if vel.vy > 600. then 600. else vel.vy +. 100.);
+      Velocity.(vel.vy <- (if vel.vy > 600. then 600. else vel.vy +. 100.));
       ())
     w.velocities;
   w
